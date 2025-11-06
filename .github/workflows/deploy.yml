@@ -1,0 +1,39 @@
+name: Automated JS Release
+
+on:
+  push:
+    branches:
+      - main  # Set this to the branch you push your source code to
+
+jobs:
+  build-and-commit:
+    runs-on: ubuntu-latest
+    
+    # Required to allow the GITHUB_TOKEN to push changes back to the repository
+    permissions:
+      contents: write 
+
+    steps:
+      - name: 🛎️ Checkout Repository
+        uses: actions/checkout@v4
+        # We use the default GITHUB_TOKEN, which now has 'write' permission
+        
+      - name: 🛠️ Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20' # Use your required Node.js version
+          cache: 'npm'
+
+      - name: ⚙️ Install dependencies
+        run: npm ci
+
+      - name: 📦 Run Publish/Build Script
+        # This runs your script, which updates the target JS file (e.g., dist/my-release.js)
+        run: npm run publish 
+
+      - name: 📤 Commit and Push the Released File
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          file_pattern: 'docs/tdownloader/main.js' 
+          commit_message: 'Automated JS file release: [skip ci]'
+          # The [skip ci] prevents the action from triggering itself again, avoiding an infinite loop
