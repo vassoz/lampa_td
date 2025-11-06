@@ -1,6 +1,0 @@
-{
-    "download-dir": "/downloads",
-    "incomplete-dir": "/downloads",
-    "incomplete-dir-enabled": false,
-    "rename-partial-files": false
-}
