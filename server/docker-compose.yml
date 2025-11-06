@@ -1,23 +1,14 @@
 version: '3.8'
 
 services:
-  transmission:
-    image: linuxserver/transmission
-    container_name: transmission
-    restart: unless-stopped
-    ports:
-      - 9091:9091
-      - 51413:51413
-      - 51413:51413/udp
+  qbittorrent:
+    container_name: qbittorrent
+    image: lscr.io/linuxserver/qbittorrent
     environment:
-      - PUID=1000
-      - PGID=1000
-      - TZ=Europe/Moscow
-      - USER=admin
-      - PASS=admin
+      WEBUI_PORT: 8080
     volumes:
-      - ./config:/config
       - ./downloads:/downloads
+    restart: unless-stopped
 
   nginx:
     image: nginx:alpine
