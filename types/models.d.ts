@@ -57,6 +57,7 @@ type TorrentInfo = {
     seeders?: number;
     activeSeeders?: number;
     files: FileInfo[];
+    savePath?: string;
 }
 
 type TorrentsData = {
