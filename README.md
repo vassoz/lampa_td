@@ -36,7 +36,7 @@
 2. **Установите плагин**
 
     Добавьте плагин в Lampa:
-    > https://kvart714.github.io/lampa/tdownloader/main.js
+    > https://vassoz.github.io/lampa_td/tdownloader/main.js
 
 
 3. **Укажите настройки сервера**
