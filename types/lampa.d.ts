@@ -287,6 +287,9 @@ declare namespace Lampa {
          */
         broken(): boolean;
     }
+    const Bell: {
+        push(params: { text: string }): void
+    }
 }
 
 type AppEvent = {
