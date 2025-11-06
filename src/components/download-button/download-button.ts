@@ -45,7 +45,13 @@ export default function () {
         ) {
             $(e.item).off('hover:enter')
             $(e.item).on('hover:enter', async (a) => {
-                await TorrentClientFactory.getClient().addTorrent(component.movie, e.element)
+                try {
+                    await TorrentClientFactory.getClient().addTorrent(component.movie, e.element)
+                } catch (err) {
+                    const msg = err && (err as Error).message ? (err as Error).message : String(err)
+                    Lampa.Bell.push({ text: `Error adding torrent: ${msg}` })
+                    throw err
+                }
 
                 Lampa.Bell.push({text: 'The torrent was added to the client'})
 
