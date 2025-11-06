@@ -18,7 +18,11 @@ export function buildTags(movie: MovieInfo): string[] {
 
     if (movie.seasons) {
         tags.push('tv')
+        tags.push(`tv/${movie.id}`)
+    } else {
+        tags.push(`movie/${movie.id}`)
     }
+
 
     return tags;
 }

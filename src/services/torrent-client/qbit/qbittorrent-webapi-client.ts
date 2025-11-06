@@ -68,6 +68,8 @@ export class QBittorrentWebApiClient implements ITorrentClient {
         form.append('urls', url.toString())
         form.append('tags', buildTags(movie).join(','))
         form.append('sequentialDownload', 'true')
+        form.append('firstLastPiecePrio', 'true')
+        form.append('category', movie.seasons ? 'Shows' : 'Movies')
         const response = await this.fetchWithAuth('/api/v2/torrents/add', {
             method: 'POST',
             body: form,
