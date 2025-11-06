@@ -47,6 +47,8 @@ export default function () {
             $(e.item).on('hover:enter', async (a) => {
                 await TorrentClientFactory.getClient().addTorrent(component.movie, e.element)
 
+                Lampa.Bell.push({text: 'The torrent was added to the client'})
+
                 component.activity.component().mark(e.element, e.item, true)
                 
                 // Lampa.Activity.back()
