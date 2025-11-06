@@ -8,7 +8,7 @@ import { DEFAULT_ACTION_KEY } from '../settings'
 async function play(source: string, torrent: TorrentInfo, name?: string) {
     const client = TorrentClientFactory.getClient()
     const files = await client.getFiles(torrent)
-    const baseUrl = client.url + '/downloads/'
+    const baseUrl = client.url + (torrent.savePath ? torrent.savePath + '/' : '/downloads/')
 
     if (files.length < 1) {
         throw new Error('No files found in torrent')
@@ -28,7 +28,7 @@ async function play(source: string, torrent: TorrentInfo, name?: string) {
             numeric: true,
             sensitivity: 'base'
         }))
-        
+
         const playlist = sortedFiles.map((f, i) => ({
             title: f.name.split(/[\\/]/).pop() || f.name,
             name: f.name,
@@ -78,18 +78,18 @@ export function openActions(source: string, torrent: TorrentInfo, name?: string)
             },
             ...(source === 'downloads-tab' && torrent.id
                 ? [
-                      {
-                          title: Lampa.Lang.translate('actions.open-card'),
-                          async onSelect() {
-                              Lampa.Activity.push({
-                                  component: 'full',
-                                  id: torrent.id,
-                                  method: info?.seasons ? 'tv' : 'movie',
-                                  card: torrent,
-                              })
-                          },
-                      },
-                  ]
+                    {
+                        title: Lampa.Lang.translate('actions.open-card'),
+                        async onSelect() {
+                            Lampa.Activity.push({
+                                component: 'full',
+                                id: torrent.id,
+                                method: info?.seasons ? 'tv' : 'movie',
+                                card: torrent,
+                            })
+                        },
+                    },
+                ]
                 : []),
             {
                 title: torrent.status === STATUS_CODES.STOPPED ? Lampa.Lang.translate('actions.resume') : Lampa.Lang.translate('actions.pause'),
