@@ -42,7 +42,7 @@ export class MovieInfoDataStorage {
     }
 
     private static async loadContentInfo(id: number, contentType: MovieType): Promise<MovieInfo | null> {
-        const url = Lampa.TMDB.api(`${contentType}/${id}`) + `?api_key=${Lampa.TMDB.key()}&language=ru&certification_country=RU&certification.lte=18`
+        const url = Lampa.TMDB.api(`${contentType}/${id}`) + `?api_key=${Lampa.TMDB.key()}&language=en&certification_country=RU&certification.lte=18`
 
         try {
             const response = await fetch(url)
