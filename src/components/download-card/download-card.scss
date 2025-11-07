@@ -1,7 +1,8 @@
 .download-card {
     all: unset;
     display: block;
-    width: 80%;
+    width: auto;
+    max-width: 450px;
     height: auto;
     margin: 0;
     margin-top: 0.75em;
@@ -13,11 +14,17 @@
 
     &__file-info {
       display: flex;
-      justify-content: space-between;
       margin-bottom: 0.5em;
 
       .file-name, .speed {
           font-size: 1.5em;
+      }
+
+      .file-name {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        margin-right: 1em;
       }
     }
 
