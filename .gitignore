@@ -53,3 +53,5 @@ dist
 server/downloads
 server/config/settings.json
 server/config
+
+lampa-source/
