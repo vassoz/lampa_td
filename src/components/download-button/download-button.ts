@@ -55,6 +55,8 @@ export default function () {
 
                 Lampa.Bell.push({text: 'The torrent was added to the client'})
 
+                Lampa.Favorite.add('history', component.movie, 100)
+
                 component.activity.component().mark(e.element, e.item, true)
                 
                 // Lampa.Activity.back()
