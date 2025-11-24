@@ -1,6 +1,6 @@
 import { updateDownloadCard } from '../components/download-card/download-card'
 import { updateDownloadCircle } from '../components/download-circle/download-circle'
-import { updateDownloadsTab } from '../components/downloads-tab/downloads-tab'
+import { syncDownloadsTab, updateDownloadsTab } from '../components/downloads-tab/downloads-tab'
 import { log } from '../log'
 import { INTERVAL_KEY, INTERVALS } from '../settings'
 import { TorrentClientFactory } from './torrent-client/torrent-client-factory'
@@ -29,11 +29,13 @@ export class BackgroundWorker {
             TorrentsDataStorage.setData(data)
 
             if ($('.d-updatable').length) {
+                // Update cards and circles individually as they might be scattered
                 for (const torrent of data.torrents) {
                     updateDownloadCard(torrent)
                     updateDownloadCircle(torrent)
-                    updateDownloadsTab(torrent)
                 }
+                // Sync the downloads tab list (handles updates and removals)
+                syncDownloadsTab(data.torrents)
             }
 
             const url = TorrentClientFactory.getClient().url
@@ -54,7 +56,7 @@ export class BackgroundWorker {
             if (BackgroundWorker.errorCount > 10) {
                 clearInterval(BackgroundWorker.subscription)
                 log('Stopping background worker due to too many errors')
-                
+
                 BackgroundWorker.notifyFirstTime(Lampa.Lang.translate('background-worker.error-detected'))
             }
         }

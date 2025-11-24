@@ -12,6 +12,7 @@ import btnHtml from './menu-button.html'
 class DownloadsTabComponent {
     private scroll!: Lampa.Scroll
     private html = $('<div></div>')
+    private checkInterval: any
 
     public create(): void {
         if (!TorrentClientFactory.isConnected) {
@@ -41,7 +42,10 @@ class DownloadsTabComponent {
             const $row = $(
                 Lampa.Template.get('downloads-row', fmt)
             )
-                .on('hover:focus', (e) => this.scroll.update(e.currentTarget as HTMLElement, true))
+                .on('hover:focus', (e) => {
+                    this.lastFocusedElement = e.currentTarget as HTMLElement
+                    this.scroll.update(e.currentTarget as HTMLElement, true)
+                })
                 .on('hover:enter', () => openTorrent('downloads-tab', torrent))
                 .on('hover:long', () => openActions('downloads-tab', torrent))
 
@@ -58,39 +62,79 @@ class DownloadsTabComponent {
         return this.html
     }
 
+
+
     private lastFocusedElement: HTMLElement | null = null
     public start(): void {
         Lampa.Controller.add('downloads-tab', {
             toggle: () => {
                 Lampa.Controller.collectionSet(this.scroll.render())
+
+                if (this.lastFocusedElement) {
+                    const inDoc = document.contains(this.lastFocusedElement)
+                    const inComponent = this.html[0].contains(this.lastFocusedElement)
+                    const isVis = $(this.lastFocusedElement).is(':visible')
+
+                    if (!inDoc && !inComponent) {
+                        this.lastFocusedElement = null
+                    }
+                }
+
                 Lampa.Controller.collectionFocus(this.lastFocusedElement ?? false, this.scroll.render())
             },
-            left: () => ((Navigator as any).canmove('left') ? (Navigator as any).move('left') : Lampa.Controller.toggle('menu')),
-            right: () => (Navigator as any).move('right'),
+            left: () => {
+                if ((Navigator as any).canmove('left')) {
+                    (Navigator as any).move('left')
+                } else {
+                    Lampa.Controller.toggle('menu')
+                }
+            },
+            right: () => {
+                ; (Navigator as any).move('right')
+            },
             up: () => {
-                ;(Navigator as any).canmove('up') ? (Navigator as any).move('up') : Lampa.Controller.toggle('head')
-                this.lastFocusedElement = (Navigator as any).getFocusedElement()
+                ; (Navigator as any).canmove('up') ? (Navigator as any).move('up') : Lampa.Controller.toggle('head')
             },
             down: () => {
-                ;(Navigator as any).canmove('down') && (Navigator as any).move('down')
-                this.lastFocusedElement = (Navigator as any).getFocusedElement()
+                ; (Navigator as any).canmove('down') && (Navigator as any).move('down')
             },
             back: () => Lampa.Activity.backward(),
         })
 
         Lampa.Controller.toggle('downloads-tab')
+
+        this.checkInterval = setInterval(() => {
+            if (Lampa.Controller.enabled().name === 'downloads-tab') {
+                const activeElement = document.activeElement
+                const isBody = activeElement === document.body
+                const isItem = activeElement && this.html[0].contains(activeElement)
+
+                if (isBody || !isItem) {
+                    let target = this.lastFocusedElement
+                    if (!target || !this.html[0].contains(target)) {
+                        target = this.html.find('.downloads-tab__item').first()[0]
+                    }
+
+                    if (target) {
+                        Lampa.Controller.collectionFocus(target, this.scroll.render())
+                    }
+                }
+            }
+        }, 500)
     }
 
-    public build(data?: any): void {}
-    public bind(data?: any): void {}
-    public empty(): void {}
-    public next(): void {}
-    public append(data?: any, append?: boolean): void {}
-    public limit(): void {}
-    public refresh(): void {}
-    public pause(): void {}
-    public stop(): void {}
+    public build(data?: any): void { }
+    public bind(data?: any): void { }
+    public empty(): void { }
+    public next(): void { }
+    public append(data?: any, append?: boolean): void { }
+    public limit(): void { }
+    public refresh(): void { }
+    public pause(): void { }
+    public stop(): void { }
     public destroy(): void {
+        clearInterval(this.checkInterval)
+        $('#dt-debug').remove()
         this.scroll.destroy()
         this.html.remove()
     }
@@ -110,6 +154,43 @@ export function updateDownloadsTab(torrent: TorrentInfo): void {
         $row.find(`[data-field="${key}"]`).each(function () {
             $(this).text((fmt as any)[key])
         })
+    })
+}
+
+export function syncDownloadsTab(torrents: TorrentInfo[]): void {
+    const $container = $('.downloads-tab__rows')
+    if (!$container.length) return
+
+    const existingIds = new Set<number>()
+
+    torrents.forEach((torrent) => {
+        const fmt = formatTorrent(torrent)
+        existingIds.add(fmt.id)
+
+        const $row = $container.find(`.downloads-tab__item[data-id="${fmt.id}"]`)
+
+        if ($row.length) {
+            updateDownloadsTab(torrent)
+        } else {
+            const $newRow = $(Lampa.Template.get('downloads-row', fmt))
+                .on('hover:focus', (e) => {
+                    // We can't easily access the component instance here to update scroll
+                    // But Lampa might handle it if we trigger the right events
+                    // For now, just binding the click actions
+                })
+                .on('hover:enter', () => openTorrent('downloads-tab', torrent))
+                .on('hover:long', () => openActions('downloads-tab', torrent))
+
+            $container.append($newRow)
+        }
+    })
+
+    // Remove items that are no longer in the list
+    $container.find('.downloads-tab__item').each(function () {
+        const id = $(this).data('id')
+        if (!existingIds.has(id)) {
+            $(this).remove()
+        }
     })
 }
 

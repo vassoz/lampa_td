@@ -3,7 +3,7 @@ import { buildTags, extractId, extractType } from '../lampa-id'
 import { mapQBState } from '../statuses'
 
 export class QBittorrentWebApiClient implements ITorrentClient {
-    constructor(public url: string, public login: string, public password: string, private cookie?: string | null) {}
+    constructor(public url: string, public login: string, public password: string, private cookie?: string | null) { }
 
     private async fetchWithAuth(path: string, options: RequestInit = {}): Promise<Response> {
         let response = await fetch(this.url + path, {
@@ -48,13 +48,13 @@ export class QBittorrentWebApiClient implements ITorrentClient {
 
     public async getData(): Promise<TorrentsData> {
         const response = await this.fetchWithAuth('/api/v2/sync/maindata')
-        
+
         if (!response.ok) throw new Error('Failed to get qBittorrent info')
-        
+
         const data = await response.json()
 
         return {
-            torrents: this.formatTorrents(Array.isArray(data.torrents) ? data.torrents : Object.keys(data.torrents).map(k => ({ ...data.torrents[k], hash: k}))),
+            torrents: this.formatTorrents(Array.isArray(data.torrents) ? data.torrents : Object.keys(data.torrents).map(k => ({ ...data.torrents[k], hash: k }))),
             info: {
                 freeSpace: data.server_state.free_space_on_disk,
             },
@@ -148,6 +148,10 @@ export class QBittorrentWebApiClient implements ITorrentClient {
         return data
             .sort((a: any, b: any) => b.added_on - a.added_on)
             .filter((t: any) => !t.tags.includes('hide'))
+            .filter((t: any) => {
+                const category = t.category || ''
+                return category === 'Movies' || category === 'Shows'
+            })
             .map((t: any) => ({
                 id: extractId(t.tags),
                 type: extractType(t.tags),
