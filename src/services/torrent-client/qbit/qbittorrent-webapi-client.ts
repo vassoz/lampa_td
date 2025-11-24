@@ -3,7 +3,7 @@ import { buildTags, extractId, extractType } from '../lampa-id'
 import { mapQBState } from '../statuses'
 
 export class QBittorrentWebApiClient implements ITorrentClient {
-    constructor(public url: string, public login: string, public password: string, private cookie?: string | null) { }
+    constructor(public url: string, public login: string, public password: string, private cookie?: string | null) {}
 
     private async fetchWithAuth(path: string, options: RequestInit = {}): Promise<Response> {
         let response = await fetch(this.url + path, {
@@ -38,7 +38,7 @@ export class QBittorrentWebApiClient implements ITorrentClient {
     }
 
     public async getTorrents(): Promise<TorrentInfo[]> {
-        let response = await this.fetchWithAuth('/api/v2/torrents/info?category=Movies|Shows')
+        let response = await this.fetchWithAuth('/api/v2/torrents/info')
 
         if (!response.ok) throw new Error('Failed to get torrents')
 
@@ -47,21 +47,16 @@ export class QBittorrentWebApiClient implements ITorrentClient {
     }
 
     public async getData(): Promise<TorrentsData> {
-        // Get torrents filtered by Movies and Shows categories
-        const response = await this.fetchWithAuth('/api/v2/torrents/info?category=Movies|Shows')
-
+        const response = await this.fetchWithAuth('/api/v2/sync/maindata')
+        
         if (!response.ok) throw new Error('Failed to get qBittorrent info')
-
-        const torrents: [] = await response.json()
-
-        // Get server state for free space info
-        const stateResponse = await this.fetchWithAuth('/api/v2/sync/maindata')
-        const stateData = await stateResponse.json()
+        
+        const data = await response.json()
 
         return {
-            torrents: this.formatTorrents(torrents),
+            torrents: this.formatTorrents(Array.isArray(data.torrents) ? data.torrents : Object.keys(data.torrents).map(k => ({ ...data.torrents[k], hash: k}))),
             info: {
-                freeSpace: stateData.server_state.free_space_on_disk,
+                freeSpace: data.server_state.free_space_on_disk,
             },
         }
     }
