@@ -80,6 +80,10 @@ class DownloadsTabComponent {
                     }
                 }
 
+                if (!this.lastFocusedElement) {
+                    this.lastFocusedElement = this.html.find('.downloads-tab__item').first()[0]
+                }
+
                 Lampa.Controller.collectionFocus(this.lastFocusedElement ?? false, this.scroll.render())
             },
             left: () => {
@@ -104,23 +108,31 @@ class DownloadsTabComponent {
         Lampa.Controller.toggle('downloads-tab')
 
         this.checkInterval = setInterval(() => {
-            if (Lampa.Controller.enabled().name === 'downloads-tab') {
-                const activeElement = document.activeElement
-                const isBody = activeElement === document.body
-                const isItem = activeElement && this.html[0].contains(activeElement)
+            if (Lampa.Activity.active().component === 'downloads-tab') {
+                const enabled = Lampa.Controller.enabled().name
 
-                if (isBody || !isItem) {
-                    let target = this.lastFocusedElement
-                    if (!target || !this.html[0].contains(target)) {
-                        target = this.html.find('.downloads-tab__item').first()[0]
-                    }
+                if (enabled !== 'downloads-tab' && enabled !== 'menu' && enabled !== 'modal' && enabled !== 'keyboard') {
+                    Lampa.Controller.toggle('downloads-tab')
+                }
 
-                    if (target) {
-                        Lampa.Controller.collectionFocus(target, this.scroll.render())
+                if (Lampa.Controller.enabled().name === 'downloads-tab') {
+                    const activeElement = document.activeElement
+                    const isBody = activeElement === document.body
+                    const isItem = activeElement && this.html[0].contains(activeElement)
+
+                    if (isBody || !isItem) {
+                        let target = this.lastFocusedElement
+                        if (!target || !this.html[0].contains(target)) {
+                            target = this.html.find('.downloads-tab__item').first()[0]
+                        }
+
+                        if (target) {
+                            Lampa.Controller.collectionFocus(target, this.scroll.render())
+                        }
                     }
                 }
             }
-        }, 500)
+        }, 200)
     }
 
     public build(data?: any): void { }
