@@ -111,7 +111,7 @@ class DownloadsTabComponent {
             if (Lampa.Activity.active().component === 'downloads-tab') {
                 const enabled = Lampa.Controller.enabled().name
 
-                if (enabled !== 'downloads-tab' && enabled !== 'menu' && enabled !== 'modal' && enabled !== 'keyboard') {
+                if (enabled !== 'downloads-tab' && enabled !== 'menu' && enabled !== 'modal' && enabled !== 'keyboard' && enabled !== 'head' && enabled !== 'search') {
                     Lampa.Controller.toggle('downloads-tab')
                 }
 
