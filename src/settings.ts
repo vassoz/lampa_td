@@ -9,7 +9,6 @@ export const URL_KEY = `${manifest.component}.server.url`
 export const STREAM_URL_KEY = `${manifest.component}.server.stream_url`
 export const LOGIN_KEY = `${manifest.component}.server.login`
 export const PASSWORD_KEY = `${manifest.component}.server.password`
-export const CLIENT_TYPE_KEY = `${manifest.component}.server.type`
 
 export const INTERVALS = [2, 5, 10, 30, 60, 5 * 60, 15 * 60]
 
@@ -63,29 +62,12 @@ export function settings() {
     Lampa.SettingsApi.addParam({
         component: manifest.component,
         param: {
-            name: 'transmission-title',
+            name: 'server-settings-title',
             type: 'title',
             default: '',
         },
         field: {
             name: 'Server settings:',
-        },
-    })
-    Lampa.SettingsApi.addParam({
-        component: manifest.component,
-        param: {
-            name: CLIENT_TYPE_KEY,
-            type: 'select',
-            placeholder: '',
-            values: ['Transmission', 'qBitTorrent'],
-            default: '0',
-        },
-        field: {
-            name: 'Torrent Client',
-        },
-        onChange(item) {
-            Lampa.Settings.update()
-            TorrentClientFactory.reset()
         },
     })
     Lampa.SettingsApi.addParam({

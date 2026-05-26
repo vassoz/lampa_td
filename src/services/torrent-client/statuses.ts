@@ -17,20 +17,6 @@ export const STATUS_CODES = {
 };
 export type TorrentStatusCode = typeof STATUS_CODES[keyof typeof STATUS_CODES];
 
-// 2. Маппер для Transmission RPC (0…6 → наши коды)
-export function mapTransmissionStatus(status: number): TorrentStatusCode {
-  switch (status) {
-    case 0: return STATUS_CODES.STOPPED;
-    case 1: return STATUS_CODES.CHECK_PENDING;
-    case 2: return STATUS_CODES.CHECKING;
-    case 3: return STATUS_CODES.DOWNLOAD_PENDING;
-    case 4: return STATUS_CODES.DOWNLOADING;
-    case 5: return STATUS_CODES.SEED_PENDING;
-    case 6: return STATUS_CODES.SEEDING;
-    default: return STATUS_CODES.UNKNOWN;
-  }
-}
-
 // 3. Маппер для qBittorrent Web API
 export function mapQBState(state: string): TorrentStatusCode {
   switch (state) {
