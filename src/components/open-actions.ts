@@ -3,12 +3,13 @@ import { STATUS_CODES } from '../services/torrent-client/statuses'
 import { TorrentClientFactory } from '../services/torrent-client/torrent-client-factory'
 import { TorrentsDataStorage } from '../services/torrents-data-storage'
 import { TorrentViewsStorage } from '../services/TorrentViewsStorage'
-import { DEFAULT_ACTION_KEY } from '../settings'
+import { DEFAULT_ACTION_KEY, STREAM_URL_KEY } from '../settings'
 
 async function play(source: string, torrent: TorrentInfo, name?: string) {
     const client = TorrentClientFactory.getClient()
     const files = await client.getFiles(torrent)
-    const baseUrl = client.url + (torrent.savePath ? torrent.savePath + '/' : '/downloads/')
+    const streamUrl = Lampa.Storage.field(STREAM_URL_KEY) || client.url
+    const baseUrl = streamUrl + (torrent.savePath ? torrent.savePath + '/' : '/downloads/')
 
     if (files.length < 1) {
         throw new Error('No files found in torrent')

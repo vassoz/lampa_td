@@ -6,6 +6,7 @@ import { BackgroundWorker } from './services/background-worker'
 export const INTERVAL_KEY = `${manifest.component}.interval`
 export const DEFAULT_ACTION_KEY = `${manifest.component}.default-action`
 export const URL_KEY = `${manifest.component}.server.url`
+export const STREAM_URL_KEY = `${manifest.component}.server.stream_url`
 export const LOGIN_KEY = `${manifest.component}.server.login`
 export const PASSWORD_KEY = `${manifest.component}.server.password`
 export const CLIENT_TYPE_KEY = `${manifest.component}.server.type`
@@ -102,6 +103,23 @@ export function settings() {
         onChange(item) {
             Lampa.Settings.update()
             TorrentClientFactory.reset()
+        },
+    })
+    Lampa.SettingsApi.addParam({
+        component: manifest.component,
+        param: {
+            name: STREAM_URL_KEY,
+            type: 'input',
+            placeholder: '',
+            values: '',
+            default: '',
+        },
+        field: {
+            name: 'Stream Url',
+            description: 'If set, this url will be used to stream video files instead of the main Url'
+        },
+        onChange(item) {
+            Lampa.Settings.update()
         },
     })
     Lampa.SettingsApi.addParam({
