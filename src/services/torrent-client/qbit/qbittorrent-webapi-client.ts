@@ -1,11 +1,11 @@
 import type { ITorrentClient } from '../../../../types/torrent-client'
-import { buildTags, extractId, extractType } from '../lampa-id'
+import { buildPath, buildTags, extractId, extractType } from '../lampa-id'
 import { mapQBState } from '../statuses'
 
 export class QBittorrentWebApiClient implements ITorrentClient {
     constructor(public url: string, public login: string, public password: string, private cookie?: string | null) { }
 
-    private async fetchWithAuth(path: string, options: RequestInit = {}): Promise<Response> {
+    private async fetchWithAuth<T>(path: string, options: RequestInit = {}): Promise<T> {
         let response = await fetch(this.url + path, {
             ...options,
             credentials: 'include',
@@ -19,7 +19,12 @@ export class QBittorrentWebApiClient implements ITorrentClient {
             })
         }
 
-        return response
+        if (!response.ok) throw new Error('Failed to get ' + path)
+
+        if (response.headers.get('content-type')?.includes('application/json')) {
+            return await response.json() as T
+        }
+        return await response.text() as unknown as T
     }
 
     public async authorize(): Promise<void> {
@@ -38,23 +43,23 @@ export class QBittorrentWebApiClient implements ITorrentClient {
     }
 
     public async getTorrents(): Promise<TorrentInfo[]> {
-        let response = await this.fetchWithAuth('/api/v2/torrents/info')
+        const data = await this.fetchWithAuth<[]>('/api/v2/torrents/info')
 
-        if (!response.ok) throw new Error('Failed to get torrents')
+        const prefs = await this.fetchWithAuth('/api/v2/app/preferences')
 
-        const data: [] = await response.json()
-        return this.formatTorrents(data)
+        return this.formatTorrents(data, prefs)
     }
 
     public async getData(): Promise<TorrentsData> {
-        const response = await this.fetchWithAuth('/api/v2/sync/maindata')
-
-        if (!response.ok) throw new Error('Failed to get qBittorrent info')
-
-        const data = await response.json()
-
+        const data = await this.fetchWithAuth<any>('/api/v2/sync/maindata')
+        
+        let torrents = data.torrents ?? []
+        torrents = Array.isArray(torrents) ? torrents : Object.keys(torrents).map(k => ({ ...torrents[k], hash: k }))
+        
+        const prefs = await this.fetchWithAuth('/api/v2/app/preferences')
+		
         return {
-            torrents: this.formatTorrents(Array.isArray(data.torrents) ? data.torrents : Object.keys(data.torrents).map(k => ({ ...data.torrents[k], hash: k }))),
+            torrents: this.formatTorrents(torrents, prefs),
             info: {
                 freeSpace: data.server_state.free_space_on_disk,
             },
@@ -70,70 +75,72 @@ export class QBittorrentWebApiClient implements ITorrentClient {
         form.append('sequentialDownload', 'true')
         form.append('firstLastPiecePrio', 'true')
         form.append('category', movie.seasons ? 'Shows' : 'Movies')
-        const response = await this.fetchWithAuth('/api/v2/torrents/add', {
+
+        const subPath = buildPath(movie)
+        if (subPath) {
+            const prefs = await this.fetchWithAuth<any>('/api/v2/app/preferences')
+            const basePath = prefs?.save_path
+
+            if (basePath) {
+                const savePath = basePath.replace(/[\\/]+$/g, '') + subPath
+                form.append('savepath', savePath)
+            }
+        }
+
+        await this.fetchWithAuth('/api/v2/torrents/add', {
             method: 'POST',
             body: form,
         })
-        if (!response.ok) throw new Error('Failed to add torrent')
     }
 
     public async startTorrent(torrent: TorrentInfo): Promise<void> {
         const params = new URLSearchParams()
         params.append('hashes', String(torrent.externalId))
-        const response = await this.fetchWithAuth('/api/v2/torrents/start', {
+        await this.fetchWithAuth('/api/v2/torrents/start', {
             method: 'POST',
             body: params,
         })
-        if (!response.ok) throw new Error('Failed to start torrents')
     }
 
     public async stopTorrent(torrent: TorrentInfo): Promise<void> {
         const params = new URLSearchParams()
         params.append('hashes', String(torrent.externalId))
-        const response = await this.fetchWithAuth('/api/v2/torrents/stop', {
+        await this.fetchWithAuth('/api/v2/torrents/stop', {
             method: 'POST',
             body: params,
         })
-        if (!response.ok) throw new Error('Failed to stop torrents')
     }
 
     public async hideTorrent(torrent: TorrentInfo): Promise<void> {
         const params = new URLSearchParams()
         params.append('hashes', String(torrent.externalId))
         params.append('tags', 'hide')
-        const response = await this.fetchWithAuth('/api/v2/torrents/addTags', {
+        await this.fetchWithAuth('/api/v2/torrents/addTags', {
             method: 'POST',
             body: params,
         })
-        if (!response.ok) throw new Error('Failed to hide torrent')
     }
 
     public async removeTorrent(torrent: TorrentInfo, deleteFiles = false): Promise<void> {
         const params = new URLSearchParams()
         params.append('hashes', String(torrent.externalId))
         params.append('deleteFiles', deleteFiles ? 'true' : 'false')
-        const response = await this.fetchWithAuth('/api/v2/torrents/delete', {
+        await this.fetchWithAuth('/api/v2/torrents/delete', {
             method: 'POST',
             body: params,
         })
-        if (!response.ok) throw new Error('Failed to remove torrents')
     }
 
     public async getFiles(torrent: TorrentInfo): Promise<FileInfo[]> {
         const params = new URLSearchParams()
         params.append('hash', String(torrent.externalId))
 
-        const response = await this.fetchWithAuth(`/api/v2/torrents/files?${params.toString()}`)
-        if (!response.ok) {
-            throw new Error(`Failed to get files for torrent ${torrent.externalId}`)
-        }
-
-        const filesData: Array<{
+        const filesData = await this.fetchWithAuth<Array<{
             name: string
             size: number
             progress: number
             piece_range?: [number, number]
-        }> = await response.json()
+        }>>(`/api/v2/torrents/files?${params.toString()}`)
 
         return filesData.map((f) => ({
             bytesCompleted: Math.floor(f.progress * f.size),
@@ -144,7 +151,7 @@ export class QBittorrentWebApiClient implements ITorrentClient {
         }))
     }
 
-    private formatTorrents(data: any[]): TorrentInfo[] {
+    private formatTorrents(data: any[], prefs: any): TorrentInfo[] {
         return data
             .sort((a: any, b: any) => b.added_on - a.added_on)
             .filter((t: any) => !t.tags.includes('hide'))
@@ -166,6 +173,8 @@ export class QBittorrentWebApiClient implements ITorrentClient {
                 seeders: t.num_seeds, // всего сидов
                 activeSeeders: t.num_complete, // активных сидов (если есть)
                 savePath: t.save_path,
+                hash: t.hash,
+                path: t.save_path.replace(prefs.save_path, '')
             }))
     }
 }

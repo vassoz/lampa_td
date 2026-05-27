@@ -1,24 +1,24 @@
-import { MovieInfoDataStorage } from '../services/movieinfo-data-storage'
+import { log } from '../log'
 import { STATUS_CODES } from '../services/torrent-client/statuses'
 import { TorrentClientFactory } from '../services/torrent-client/torrent-client-factory'
 import { TorrentsDataStorage } from '../services/torrents-data-storage'
 import { TorrentViewsStorage } from '../services/TorrentViewsStorage'
 import { DEFAULT_ACTION_KEY, STREAM_URL_KEY } from '../settings'
-
 async function play(source: string, torrent: TorrentInfo, name?: string) {
     const client = TorrentClientFactory.getClient()
     const files = await client.getFiles(torrent)
     const streamUrl = Lampa.Storage.field(STREAM_URL_KEY) || client.url
-    const baseUrl = streamUrl + (torrent.savePath ? torrent.savePath + '/' : '/downloads/')
+    const baseUrl = `${streamUrl}/downloads/${torrent.path}/`
 
     if (files.length < 1) {
         throw new Error('No files found in torrent')
     }
 
     if (files.length === 1) {
-        Lampa.Player.play({
+        playFile({
             title: name || torrent.name,
             url: baseUrl + files[0].name,
+            torrent_hash: torrent.hash, //Отправляем в плеер хеш торрента, для совместимости с плагином tracks
         })
     }
 
@@ -29,32 +29,38 @@ async function play(source: string, torrent: TorrentInfo, name?: string) {
             numeric: true,
             sensitivity: 'base'
         }))
-
         const playlist = sortedFiles.map((f, i) => ({
             title: f.name.split(/[\\/]/).pop() || f.name,
             name: f.name,
             url: baseUrl + f.name,
             picked: views[f.name],
             selected: views.last === f.name,
+            torrent_hash: torrent.hash,
         }))
         Lampa.Select.show({
             title: Lampa.Lang.translate('actions.select-file'),
             items: playlist,
             async onSelect(item) {
                 TorrentViewsStorage.rememberView(torrent, item.name)
-                Lampa.Player.play({
+                playFile({
                     playlist,
                     title: name || torrent.name,
                     url: item.url,
+                    torrent_hash: torrent.hash, //Отправляем в плеер хеш торрента, для совместимости с плагином tracks
                 })
-                Lampa.Player.playlist(playlist)
-                Lampa.Controller.toggle(source)
+                //Lampa.Controller.toggle(source) //Fix by lexandr0s. 
             },
             onBack: function onBack() {
                 Lampa.Controller.toggle(source)
             },
         })
     }
+}
+
+function playFile(options: Lampa.PlayOptions) {
+    log(`Player request ${options.url}`, options)
+    Lampa.Player.play(options)
+    Lampa.Player.playlist(options.playlist ?? []) //Fix by lexandr0s. Clearing the playlist after TV series
 }
 
 function resumeOrPause(torrent: TorrentInfo) {
@@ -67,7 +73,6 @@ function resumeOrPause(torrent: TorrentInfo) {
 
 export function openActions(source: string, torrent: TorrentInfo, name?: string) {
     torrent = TorrentsDataStorage.ensureMovie(torrent)!
-    const info = MovieInfoDataStorage.getMovieInfo(torrent)
     Lampa.Select.show({
         title: Lampa.Lang.translate('actions.title'),
         items: [
@@ -79,18 +84,18 @@ export function openActions(source: string, torrent: TorrentInfo, name?: string)
             },
             ...(source === 'downloads-tab' && torrent.id
                 ? [
-                    {
-                        title: Lampa.Lang.translate('actions.open-card'),
-                        async onSelect() {
-                            Lampa.Activity.push({
-                                component: 'full',
-                                id: torrent.id,
-                                method: info?.seasons ? 'tv' : 'movie',
-                                card: torrent,
-                            })
-                        },
-                    },
-                ]
+                      {
+                          title: Lampa.Lang.translate('actions.open-card'),
+                          async onSelect() {
+                              Lampa.Activity.push({
+                                  component: 'full',
+                                  id: torrent.id,
+                                  method: torrent.type,
+                                  card: torrent,
+                              })
+                          },
+                      },
+                  ]
                 : []),
             {
                 title: torrent.status === STATUS_CODES.STOPPED ? Lampa.Lang.translate('actions.resume') : Lampa.Lang.translate('actions.pause'),
@@ -133,10 +138,17 @@ export function openActions(source: string, torrent: TorrentInfo, name?: string)
 }
 
 export function openTorrent(source: string, torrent: TorrentInfo, name?: string) {
+    torrent = TorrentsDataStorage.getByHash(torrent.hash) ?? torrent
     const action = Lampa.Storage.field(DEFAULT_ACTION_KEY)
     if (action == 1) {
-        play(source, torrent, name)
+        if (torrent.percentDone === 1) {
+            play(source, torrent, name)
+        } else {
+            resumeOrPause(torrent)
+        }
     } else if (action == 2) {
+        play(source, torrent, name)
+    } else if (action == 3) {
         resumeOrPause(torrent)
     } else {
         openActions(source, torrent, name)
